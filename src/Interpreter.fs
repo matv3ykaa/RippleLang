@@ -133,15 +133,16 @@ let rec evaluate (expr: Expr) (env: Environment) : Value =
 
     | Apply (func, arg) ->
         let funcValue = evaluate func env
-        let argValue = evaluate arg env  // Evaluate the argument first
+        let argValue = evaluate arg env
 
         match funcValue with
         | VFunction f ->
             match f with
             | RecursiveFunction (closureEnv, funcName, param, body) ->
-                // Обновляем окружение, включая текущий экземпляр функции
-                let updatedEnv = closureEnv |> extend funcName funcValue
-                let newEnv = updatedEnv |> extend param argValue
+                // Create a copy of the environment with the function itself bound to its name
+                let recEnv = extend funcName funcValue closureEnv
+                // Add the argument to the environment
+                let newEnv = extend param argValue recEnv
                 evaluate body newEnv
             | UserFunction (closureEnv, param, body) ->
                 let newEnv = extend param argValue closureEnv
@@ -149,7 +150,8 @@ let rec evaluate (expr: Expr) (env: Environment) : Value =
             | Closure (closureEnv, param, body) ->
                 let newEnv = extend param argValue closureEnv
                 evaluate body newEnv
-
+        | VNativeFunction (_, impl) ->
+            impl [argValue]
         | _ ->
             failwithf "Cannot apply non-function value: %s" (valueToString funcValue)
 
@@ -162,13 +164,9 @@ let rec evaluate (expr: Expr) (env: Environment) : Value =
         match valueExpr with
         | Lambda (param, lambdaBody) ->
             // Create recursive function
-            let funcRef = ref VUnit  // Temporary placeholder
-            let tempEnv = extend name (!funcRef) env
-            let recursiveFunc = VFunction (RecursiveFunction (tempEnv, name, param, lambdaBody))
-            funcRef := recursiveFunc  // Update the reference
-            let newEnv = extend name recursiveFunc env
+            let recFunc = VFunction (RecursiveFunction (env, name, param, lambdaBody))
+            let newEnv = extend name recFunc env
             evaluate bodyExpr newEnv
-
         | _ ->
             failwith "let rec requires a lambda expression"
 
@@ -182,24 +180,22 @@ let rec evaluate (expr: Expr) (env: Environment) : Value =
     | Op (left, op, right) ->
         let leftValue = evaluate left env
 
-        // Специальная обработка для логических "&&" и "||" с коротким замыканием
+        // Short-circuit evaluation for logical operators
         match op with
         | And ->
             if not (toBool leftValue) then
-                VBool false  // Если левая часть false, сразу возвращаем false без вычисления правой
+                VBool false
             else
                 let rightValue = evaluate right env
                 VBool (toBool rightValue)
-
         | Or ->
             if toBool leftValue then
-                VBool true   // Если левая часть true, сразу возвращаем true без вычисления правой
+                VBool true
             else
                 let rightValue = evaluate right env
                 VBool (toBool rightValue)
-
         | _ ->
-            // Обычное вычисление бинарной операции
+            // Regular evaluation for other operators
             let rightValue = evaluate right env
             evaluateOp leftValue op rightValue
 

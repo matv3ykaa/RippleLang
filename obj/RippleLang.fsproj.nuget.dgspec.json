@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/matt/Documents/test/RippleLang.fsproj": {}
+    "/Users/matt/RiderProjects/RippleLang/RippleLang.fsproj": {}
   },
   "projects": {
-    "/Users/matt/Documents/test/RippleLang.fsproj": {
+    "/Users/matt/RiderProjects/RippleLang/RippleLang.fsproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/matt/Documents/test/RippleLang.fsproj",
+        "projectUniqueName": "/Users/matt/RiderProjects/RippleLang/RippleLang.fsproj",
         "projectName": "RippleLang",
-        "projectPath": "/Users/matt/Documents/test/RippleLang.fsproj",
+        "projectPath": "/Users/matt/RiderProjects/RippleLang/RippleLang.fsproj",
         "packagesPath": "/Users/matt/.nuget/packages/",
-        "outputPath": "/Users/matt/Documents/test/obj/",
+        "outputPath": "/Users/matt/RiderProjects/RippleLang/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/matt/.nuget/NuGet/NuGet.Config"

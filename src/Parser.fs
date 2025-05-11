@@ -57,7 +57,6 @@ type Parser(tokens: Token list) =
             else Let(name, value, body)
         else this.ParseIf()
 
-    // Исправлено: добавлена обработка бинарных операторов
     member private this.ParseIf() =
         if this.Match([IF]) then
             let cond = this.ParseEquality()
@@ -77,27 +76,44 @@ type Parser(tokens: Token list) =
             this.Consume(ARROW, "Expected '->'")  |> ignore
             let body = this.ParseExpression()
             Lambda(param, body)
-        else this.ParseApp()
-
-    member private this.ParseApp() =
+        else this.ParseLogical()
+        
+    // Added method for logical operators (AND, OR)
+    member private this.ParseLogical() =
+        let mutable expr = this.ParseComparison()
+        while this.Match([AND; OR]) do
+            let op = 
+                match this.Previous() with
+                | AND -> And
+                | OR -> Or
+                | _ -> failwith "Unexpected operator"
+            expr <- Op(expr, op, this.ParseComparison())
+        expr
+        
+    // Added method for comparison operators
+    member private this.ParseComparison() =
         let mutable expr = this.ParseEquality()
-        while not (this.IsAtEnd()) &&
-            (match this.Peek() with
-             | IDENT _ | INT _ | FLOAT _ | STRING _ | LPAREN | LBRACKET -> true
-             | _ -> false) do
-            expr <- Apply(expr, this.ParseEquality())
+        while this.Match([GREATER; GREATEREQUAL; LESS; LESSEQUAL]) do
+            let op =
+                match this.Previous() with
+                | GREATER -> Gt
+                | GREATEREQUAL -> Gte
+                | LESS -> Lt
+                | LESSEQUAL -> Lte
+                | _ -> failwith "Unexpected operator"
+            expr <- Op(expr, op, this.ParseEquality())
         expr
 
     member private this.ParseEquality() =
-        let expr = this.ParseAdditive()
-        if this.Match([EQUAL; NOTEQUAL]) then
+        let mutable expr = this.ParseAdditive()
+        while this.Match([EQUAL; NOTEQUAL]) do
             let op =
                 match this.Previous() with
                 | EQUAL -> Eq
                 | NOTEQUAL -> Neq
                 | _ -> failwith "Unexpected operator"
-            Op(expr, op, this.ParseAdditive())
-        else expr
+            expr <- Op(expr, op, this.ParseAdditive())
+        expr
 
     member private this.ParseAdditive() =
         let mutable expr = this.ParseMultiplicative()
@@ -111,7 +127,7 @@ type Parser(tokens: Token list) =
         expr
 
     member private this.ParseMultiplicative() =
-        let mutable expr = this.ParsePrimary()
+        let mutable expr = this.ParseApp()
         while this.Match([STAR; SLASH; PERCENT]) do
             let op =
                 match this.Previous() with
@@ -119,7 +135,27 @@ type Parser(tokens: Token list) =
                 | SLASH -> Div
                 | PERCENT -> Mod
                 | _ -> failwith "Unexpected operator"
-            expr <- Op(expr, op, this.ParsePrimary())
+            expr <- Op(expr, op, this.ParseApp())
+        expr
+
+    // Fixed method for function application
+    member private this.ParseApp() =
+        let mutable expr = this.ParsePrimary()
+        
+        // Check if we have a function application with parentheses
+        while this.Match([LPAREN]) do
+            // Parse arguments inside parentheses
+            let arg = 
+                if this.Match([RPAREN]) then 
+                    Literal(LUnit)  // Empty parentheses represent unit value
+                else
+                    let argExpr = this.ParseExpression()
+                    this.Consume(RPAREN, "Expected ')'") |> ignore
+                    argExpr
+            
+            // Apply function to arguments
+            expr <- Apply(expr, arg)
+            
         expr
 
     member private this.ParsePrimary() =
@@ -131,9 +167,12 @@ type Parser(tokens: Token list) =
         | FALSE -> Literal(LBool false)
         | IDENT name -> Variable name
         | LPAREN ->
-            let expr = this.ParseExpression()
-            this.Consume(RPAREN, "Expected ')'")  |> ignore
-            expr
+            if this.Match([RPAREN]) then
+                Literal(LUnit)  // Empty parentheses represent unit value
+            else
+                let expr = this.ParseExpression()
+                this.Consume(RPAREN, "Expected ')'")  |> ignore
+                expr
         | LBRACKET ->
             let mutable items = []
             while not (this.Match([RBRACKET])) do

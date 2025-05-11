@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "vIer7OHfNUk=",
+  "dgSpecHash": "UuqSOcYCzWA=",
   "success": true,
-  "projectFilePath": "/Users/matt/Documents/test/RippleLang.fsproj",
+  "projectFilePath": "/Users/matt/RiderProjects/RippleLang/RippleLang.fsproj",
   "expectedPackageFiles": [
     "/Users/matt/.nuget/packages/fsharp.core/9.0.202/fsharp.core.9.0.202.nupkg.sha512",
     "/Users/matt/.nuget/packages/microsoft.netcore.app.ref/6.0.36/microsoft.netcore.app.ref.6.0.36.nupkg.sha512",
