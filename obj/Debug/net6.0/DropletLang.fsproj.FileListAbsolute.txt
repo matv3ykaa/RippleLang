@@ -1,0 +1,5 @@
+/Users/matt/RiderProjects/RippleLang/obj/Debug/net6.0/DropletLang.fsproj.AssemblyReference.cache
+/Users/matt/RiderProjects/RippleLang/obj/Debug/net6.0/DropletLang.AssemblyInfoInputs.cache
+/Users/matt/RiderProjects/RippleLang/obj/Debug/net6.0/DropletLang.AssemblyInfo.fs
+/Users/matt/RiderProjects/RippleLang/obj/Debug/net6.0/DropletLang.fsproj.CoreCompileInputs.cache
+/Users/matt/RiderProjects/RippleLang/obj/Debug/net6.0/DropletLang.sourcelink.json

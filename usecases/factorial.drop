@@ -1,8 +1,24 @@
+# Программа для вычисления факториала
+# Пример использования рекурсивных функций в Droplet
+
 # Импортируем стандартную библиотеку
 absorb "stdlib.drop"
 
+# Определение функции факториала с использованием рекурсии
 let rec factorial = flow n ->
-    when n == 0 then 1  #  Комментарий с кириллицей
-    else n * factorial (n - 1)
-in
-factorial 5
+  when n <= 1 then
+    1
+  else
+    n * factorial (n - 1)
+  in
+
+# Вычисляем факториал числа 5
+let result = factorial 5 in
+
+# Выводим результат
+print "Факториал 5 = " + toString result  # Должно вывести: Факториал 5 = 120
+
+# Интерактивный вариант
+let userInput = inputInt "Введите число для расчета факториала: " in
+let userResult = factorial userInput in
+print "Факториал " + toString userInput + " = " + toString userResult

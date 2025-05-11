@@ -113,9 +113,9 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/matt/RiderProjects/RippleLang/RippleLang.fsproj",
-      "projectName": "RippleLang",
-      "projectPath": "/Users/matt/RiderProjects/RippleLang/RippleLang.fsproj",
+      "projectUniqueName": "/Users/matt/RiderProjects/RippleLang/DropletLang.fsproj",
+      "projectName": "DropletLang",
+      "projectPath": "/Users/matt/RiderProjects/RippleLang/DropletLang.fsproj",
       "packagesPath": "/Users/matt/.nuget/packages/",
       "outputPath": "/Users/matt/RiderProjects/RippleLang/obj/",
       "projectStyle": "PackageReference",
