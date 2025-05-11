@@ -135,25 +135,24 @@ type Parser(tokens: Token list) =
                 | SLASH -> Div
                 | PERCENT -> Mod
                 | _ -> failwith "Unexpected operator"
-            expr <- Op(expr, op, this.ParseApp())
+            expr <- Op(expr, op, this.ParseMultiplicative())
         expr
 
     // Fixed method for function application
     member private this.ParseApp() =
         let mutable expr = this.ParsePrimary()
         
-        // Check if we have a function application with parentheses
-        while this.Match([LPAREN]) do
-            // Parse arguments inside parentheses
-            let arg = 
-                if this.Match([RPAREN]) then 
-                    Literal(LUnit)  // Empty parentheses represent unit value
-                else
-                    let argExpr = this.ParseExpression()
-                    this.Consume(RPAREN, "Expected ')'") |> ignore
-                    argExpr
+        // Continue parsing as long as we have valid application expressions following
+        while not (this.IsAtEnd()) && 
+              (match this.Peek() with 
+               | LPAREN | INT _ | FLOAT _ | STRING _ | TRUE | FALSE 
+               | IDENT _ | LBRACKET -> true 
+               | _ -> false) do
             
-            // Apply function to arguments
+            // Parse argument
+            let arg = this.ParsePrimary()
+            
+            // Apply function to argument
             expr <- Apply(expr, arg)
             
         expr

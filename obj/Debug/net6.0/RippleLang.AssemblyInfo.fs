@@ -10,7 +10,7 @@ open System.Reflection
 [<assembly: System.Reflection.AssemblyCompanyAttribute("RippleLang")>]
 [<assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")>]
 [<assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")>]
-[<assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a3476a7a40620044878a7cdd3fc34943fb8f7748")>]
+[<assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9ab7a92e6768b4c9c817ab060cc332e2e27fc53c")>]
 [<assembly: System.Reflection.AssemblyProductAttribute("RippleLang")>]
 [<assembly: System.Reflection.AssemblyTitleAttribute("RippleLang")>]
 [<assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")>]
