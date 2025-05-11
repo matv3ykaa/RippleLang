@@ -1,8 +1,9 @@
-module RippleLang.Interpreter
+module DropletLang.Interpreter
 
-open RippleLang.AST
-open RippleLang.Value
-open RippleLang.Environment
+open DropletLang.AST
+open DropletLang.Value
+open DropletLang.Environment
+open System.IO
 
 // Функция для вычисления бинарных операций
 let rec evaluateOp left op right =
@@ -118,8 +119,27 @@ let rec evaluateOp left op right =
         | VList items -> VList (left :: items)
         | _ -> failwithf "Cannot cons %s to non-list %s" (valueToString left) (valueToString right)
 
+// Получение модуля для импорта
+let importModule (path: string) (baseDir: string) (stdEnv: Environment) =
+    let fullPath = 
+        if Path.IsPathRooted(path) then 
+            path 
+        else 
+            Path.Combine(baseDir, path)
+    
+    if not (fullPath.EndsWith(".drop")) then
+        failwithf "Expected .drop file for import: %s" path
+    
+    if not (File.Exists(fullPath)) then
+        failwithf "Module not found: %s" path
+    
+    let moduleContent = File.ReadAllText(fullPath)
+    let moduleAst = parse moduleContent
+    executeProgram moduleAst stdEnv |> ignore
+    stdEnv
+
 // Функция для вычисления выражений
-let rec evaluate (expr: Expr) (env: Environment) : Value =
+and evaluate (expr: Expr) (env: Environment) (baseDir: string) : Value =
     match expr with
     | Literal lit -> literalToValue lit
 
@@ -128,88 +148,127 @@ let rec evaluate (expr: Expr) (env: Environment) : Value =
         | Some value -> value
         | None -> failwithf "Undefined variable: %s" name
 
-    | Lambda (param, body) ->
+    | Flow (param, body) ->
         VFunction (Closure (env, param, body))
 
     | Apply (func, arg) ->
-        let funcValue = evaluate func env
-        let argValue = evaluate arg env
+        let funcValue = evaluate func env baseDir
+        let argValue = evaluate arg env baseDir
 
         match funcValue with
         | VFunction f ->
             match f with
             | RecursiveFunction (closureEnv, funcName, param, body) ->
-                // Create a copy of the environment with the function itself bound to its name
+                // Создаем копию окружения с функцией, привязанной к ее имени
                 let recEnv = extend funcName funcValue closureEnv
-                // Add the argument to the environment
+                // Добавляем аргумент в окружение
                 let newEnv = extend param argValue recEnv
-                evaluate body newEnv
+                evaluate body newEnv baseDir
             | UserFunction (closureEnv, param, body) ->
                 let newEnv = extend param argValue closureEnv
-                evaluate body newEnv
+                evaluate body newEnv baseDir
             | Closure (closureEnv, param, body) ->
                 let newEnv = extend param argValue closureEnv
-                evaluate body newEnv
+                evaluate body newEnv baseDir
         | VNativeFunction (_, impl) ->
             impl [argValue]
         | _ ->
             failwithf "Cannot apply non-function value: %s" (valueToString funcValue)
 
     | Let (name, valueExpr, bodyExpr) ->
-        let value = evaluate valueExpr env
+        let value = evaluate valueExpr env baseDir
         let newEnv = extend name value env
-        evaluate bodyExpr newEnv
+        evaluate bodyExpr newEnv baseDir
 
     | LetRec (name, valueExpr, bodyExpr) ->
         match valueExpr with
-        | Lambda (param, lambdaBody) ->
-            // Create recursive function
+        | Flow (param, lambdaBody) ->
+            // Создаем рекурсивную функцию
             let recFunc = VFunction (RecursiveFunction (env, name, param, lambdaBody))
             let newEnv = extend name recFunc env
-            evaluate bodyExpr newEnv
+            evaluate bodyExpr newEnv baseDir
         | _ ->
-            failwith "let rec requires a lambda expression"
+            failwith "let rec requires a flow expression"
 
-    | If (condExpr, thenExpr, elseExpr) ->
-        let condition = evaluate condExpr env
+    | When (condExpr, thenExpr, elseExpr) ->
+        let condition = evaluate condExpr env baseDir
         if toBool condition then
-            evaluate thenExpr env
+            evaluate thenExpr env baseDir
         else
-            evaluate elseExpr env
+            evaluate elseExpr env baseDir
+
+    | Drip (initExpr, condExpr, stepExpr, bodyExpr) ->
+        // Инициализация
+        let initValue = evaluate initExpr env baseDir
+        
+        // Создаем новое окружение с переменной цикла
+        let loopVar = "_drip_counter"
+        let loopEnv = extend loopVar initValue env
+        
+        // Рекурсивная функция для выполнения цикла
+        let rec executeLoop env =
+            // Проверяем условие
+            let condValue = evaluate condExpr env baseDir
+            if toBool condValue then
+                // Выполняем тело цикла
+                let _ = evaluate bodyExpr env baseDir
+                
+                // Выполняем шаг
+                let stepValue = evaluate stepExpr env baseDir
+                
+                // Обновляем переменную цикла
+                let newEnv = extend loopVar stepValue env
+                
+                // Следующая итерация
+                executeLoop newEnv
+            else
+                VUnit
+                
+        executeLoop loopEnv
 
     | Op (left, op, right) ->
-        let leftValue = evaluate left env
+        let leftValue = evaluate left env baseDir
 
-        // Short-circuit evaluation for logical operators
+        // Короткое замыкание для логических операторов
         match op with
         | And ->
             if not (toBool leftValue) then
                 VBool false
             else
-                let rightValue = evaluate right env
+                let rightValue = evaluate right env baseDir
                 VBool (toBool rightValue)
         | Or ->
             if toBool leftValue then
                 VBool true
             else
-                let rightValue = evaluate right env
+                let rightValue = evaluate right env baseDir
                 VBool (toBool rightValue)
         | _ ->
-            // Regular evaluation for other operators
-            let rightValue = evaluate right env
+            // Обычное вычисление для других операторов
+            let rightValue = evaluate right env baseDir
             evaluateOp leftValue op rightValue
 
     | List exprs ->
-        VList (exprs |> List.map (fun e -> evaluate e env))
+        VList (exprs |> List.map (fun e -> evaluate e env baseDir))
 
     | Tuple exprs ->
-        VTuple (exprs |> List.map (fun e -> evaluate e env))
+        VTuple (exprs |> List.map (fun e -> evaluate e env baseDir))
+        
+    | Import path ->
+        // Импортируем модуль и возвращаем VUnit
+        let _ = importModule path baseDir env
+        VUnit
+
+// Вызов парсера
+and parse source =
+    DropletLang.Parser.parse source 
 
 // Выполнение программы (списка выражений)
-let executeProgram (program: Program) (env: Environment) : Value =
+and executeProgram (program: Program) (env: Environment) : Value =
+    let baseDir = Directory.GetCurrentDirectory()
     match program with
     | [] -> VUnit  // Пустая программа возвращает Unit
     | expressions ->
         // Выполняем все выражения последовательно и возвращаем результат последнего
         expressions
-        |> List.fold (fun _ expr -> evaluate expr env) VUnit
+        |> List.fold (fun _ expr -> evaluate expr env baseDir) VUnit

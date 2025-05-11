@@ -1,5 +1,0 @@
-let rec factorial = \n ->
-    if n == 0 then 1  //  Комментарий с кириллицей
-    else n * factorial (n - 1)
-in
-factorial 5

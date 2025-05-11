@@ -1,7 +1,7 @@
-module RippleLang.Parser
+module DropletLang.Parser
 
-open RippleLang.AST
-open RippleLang.Lexer
+open DropletLang.AST
+open DropletLang.Lexer
 
 type Parser(tokens: Token list) =
     let mutable current = 0
@@ -42,6 +42,13 @@ type Parser(tokens: Token list) =
     member private this.ParseExpression() =
         this.ParseLet()
 
+    member private this.ParseImport() =
+        if this.Match([ABSORB]) then
+            match this.Advance() with
+            | STRING path -> Import path
+            | _ -> failwith "Expected string after 'absorb'"
+        else this.ParseLet()
+
     member private this.ParseLet() =
         if this.Match([LET]) then
             let isRec = this.Match([REC])
@@ -55,30 +62,43 @@ type Parser(tokens: Token list) =
             let body = this.ParseExpression()
             if isRec then LetRec(name, value, body)
             else Let(name, value, body)
-        else this.ParseIf()
+        else this.ParseWhen()
 
-    member private this.ParseIf() =
-        if this.Match([IF]) then
+    member private this.ParseWhen() =
+        if this.Match([WHEN]) then
             let cond = this.ParseEquality()
             this.Consume(THEN, "Expected 'then'") |> ignore
             let thenBr = this.ParseExpression()
             this.Consume(ELSE, "Expected 'else'") |> ignore
             let elseBr = this.ParseExpression()
-            If(cond, thenBr, elseBr)
-        else this.ParseLambda()
+            When(cond, thenBr, elseBr)
+        else this.ParseDrip()
+            
+    member private this.ParseDrip() =
+        if this.Match([DRIP]) then
+            this.Consume(LPAREN, "Expected '(' after 'drip'") |> ignore
+            let init = this.ParseExpression()
+            this.Consume(ARROW, "Expected '->' after initialization") |> ignore
+            let cond = this.ParseExpression()
+            this.Consume(ARROW, "Expected '->' after condition") |> ignore
+            let step = this.ParseExpression()
+            this.Consume(RPAREN, "Expected ')' to close drip parameters") |> ignore
+            let body = this.ParseExpression()
+            Drip(init, cond, step, body)
+        else this.ParseFlow()
 
-    member private this.ParseLambda() =
-        if this.Match([LAMBDA]) then
+    member private this.ParseFlow() =
+        if this.Match([FLOW]) then
             let param =
                 match this.Advance() with
                 | IDENT s -> s
                 | _ -> failwith "Expected parameter"
             this.Consume(ARROW, "Expected '->'")  |> ignore
             let body = this.ParseExpression()
-            Lambda(param, body)
+            Flow(param, body)
         else this.ParseLogical()
         
-    // Added method for logical operators (AND, OR)
+    // Метод для логических операторов (AND, OR)
     member private this.ParseLogical() =
         let mutable expr = this.ParseComparison()
         while this.Match([AND; OR]) do
@@ -90,7 +110,7 @@ type Parser(tokens: Token list) =
             expr <- Op(expr, op, this.ParseComparison())
         expr
         
-    // Added method for comparison operators
+    // Метод для операторов сравнения
     member private this.ParseComparison() =
         let mutable expr = this.ParseEquality()
         while this.Match([GREATER; GREATEREQUAL; LESS; LESSEQUAL]) do
@@ -138,21 +158,21 @@ type Parser(tokens: Token list) =
             expr <- Op(expr, op, this.ParseMultiplicative())
         expr
 
-    // Fixed method for function application
+    // Метод для применения функции
     member private this.ParseApp() =
         let mutable expr = this.ParsePrimary()
         
-        // Continue parsing as long as we have valid application expressions following
+        // Продолжаем разбор пока у нас есть допустимые выражения применения
         while not (this.IsAtEnd()) && 
               (match this.Peek() with 
                | LPAREN | INT _ | FLOAT _ | STRING _ | TRUE | FALSE 
                | IDENT _ | LBRACKET -> true 
                | _ -> false) do
             
-            // Parse argument
+            // Разбор аргумента
             let arg = this.ParsePrimary()
             
-            // Apply function to argument
+            // Применение функции к аргументу
             expr <- Apply(expr, arg)
             
         expr
@@ -167,7 +187,7 @@ type Parser(tokens: Token list) =
         | IDENT name -> Variable name
         | LPAREN ->
             if this.Match([RPAREN]) then
-                Literal(LUnit)  // Empty parentheses represent unit value
+                Literal(LUnit)  // Пустые скобки представляют значение unit
             else
                 let expr = this.ParseExpression()
                 this.Consume(RPAREN, "Expected ')'")  |> ignore

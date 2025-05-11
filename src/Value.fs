@@ -1,8 +1,8 @@
-module RippleLang.Value
+module DropletLang.Value
 
-open RippleLang.AST
+open DropletLang.AST
 
-// Представление значений в RippleLang
+// Представление значений в DropletLang
 type Value =
     | VInt of int
     | VFloat of float

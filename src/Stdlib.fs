@@ -1,11 +1,11 @@
-module RippleLang.StdLib
+module DropletLang.StdLib
 
 open System
-open RippleLang.Value
-open RippleLang.Environment
-open RippleLang.Interpreter
+open DropletLang.Value
+open DropletLang.Environment
+open DropletLang.Interpreter
 
-// Стандартная библиотека RippleLang
+// Стандартная библиотека DropletLang
 
 // Функции для работы с числами
 let numPrint = VNativeFunction("print", fun args ->

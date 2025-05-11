@@ -1,11 +1,11 @@
-module RippleLang.Program
+module DropletLang.Program
 open System
-open RippleLang.Parser
-open RippleLang.AST
-open RippleLang.Value
-open RippleLang.Environment
-open RippleLang.StdLib
-open RippleLang.Interpreter
+open DropletLang.Parser
+open DropletLang.AST
+open DropletLang.Value
+open DropletLang.Environment
+open DropletLang.StdLib
+open DropletLang.Interpreter
 
 // Функция для отображения AST в строку (для отладки)
 let rec astToString expr =
@@ -18,15 +18,18 @@ let rec astToString expr =
         | LString s -> sprintf "\"%s\"" s
         | LUnit -> "()"
     | Variable name -> name
-    | Lambda (param, body) -> sprintf "(\\%s -> %s)" param (astToString body)
+    | Flow (param, body) -> sprintf "(flow %s -> %s)" param (astToString body)
     | Apply (func, arg) -> sprintf "(%s %s)" (astToString func) (astToString arg)
     | Let (name, value, body) ->
         sprintf "(let %s = %s in %s)" name (astToString value) (astToString body)
     | LetRec (name, value, body) ->
         sprintf "(let rec %s = %s in %s)" name (astToString value) (astToString body)
-    | If (cond, thenExpr, elseExpr) ->
-        sprintf "(if %s then %s else %s)"
+    | When (cond, thenExpr, elseExpr) ->
+        sprintf "(when %s then %s else %s)"
             (astToString cond) (astToString thenExpr) (astToString elseExpr)
+    | Drip (init, cond, step, body) ->
+        sprintf "(drip (%s -> %s -> %s) %s)"
+            (astToString init) (astToString cond) (astToString step) (astToString body)
     | Op (left, op, right) ->
         let opStr =
             match op with
@@ -51,11 +54,13 @@ let rec astToString expr =
     | Tuple exprs ->
         let elements = exprs |> List.map astToString |> String.concat ", "
         sprintf "(%s)" elements
+    | Import path ->
+        sprintf "(absorb \"%s\")" path
 
 // Функция для запуска REPL (Read-Eval-Print Loop)
 let runRepl() =
     let stdEnv = createStdEnv()
-    printfn "RippleLang REPL - выход через Ctrl+C"
+    printfn "DropletLang REPL - выход через Ctrl+C"
     printfn "----------------------------------------"
 
     let rec loop env =
@@ -82,7 +87,7 @@ let runRepl() =
     
     loop stdEnv
 
-// Функция для выполнения RippleLang файлов
+// Функция для выполнения DropletLang файлов
 let runFile (path: string) =
     try
         let content = System.IO.File.ReadAllText(path)
@@ -96,10 +101,13 @@ let runFile (path: string) =
         printfn "Ошибка: %s" ex.Message
         1
 
-// Тестовая программа - факториал в RippleLang
+// Тестовая программа - факториал в DropletLang
 let factorialProgram = """
-let rec factorial = \n ->
-  if n == 0 then
+# Импортируем стандартную библиотеку
+absorb "stdlib.drop"
+
+let rec factorial = flow n ->
+  when n == 0 then
     1
   else
     n * factorial (n - 1)
@@ -107,21 +115,24 @@ let rec factorial = \n ->
 factorial 5
 """
 
-// Тестовая программа - список Фибоначчи в RippleLang
+// Тестовая программа - список Фибоначчи в DropletLang
 let fibonacciProgram = """
-let rec fib = \n ->
-  if n <= 1 then
+# Импортируем стандартную библиотеку
+absorb "stdlib.drop"
+
+let rec fib = flow n ->
+  when n <= 1 then
     n
   else
     fib (n - 1) + fib (n - 2)
   in
-let rec makeList = \n ->
-  if n < 0 then
+let rec makeList = flow n ->
+  when n < 0 then
     []
   else
     makeList (n - 1) ++ [fib n]
   in
-makeList 10  // [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55]
+makeList 10  # [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55]
 """
 
 // Главная функция
@@ -133,7 +144,7 @@ let main argv =
         0
     else if argv.[0] = "--test" then
         // Запускаем тесты
-        printfn "Запуск тестовых программ RippleLang..."
+        printfn "Запуск тестовых программ DropletLang..."
         printfn "==================================="
         
         printfn "Тест 1: Факториал"
@@ -160,6 +171,10 @@ let main argv =
         
         0
     else
-        // Запускаем файл с исходным кодом
-        runFile argv.[0]
-        
+        // Проверяем расширение файла
+        if not (argv.[0].EndsWith(".drop")) then
+            printfn "Ошибка: файл должен иметь расширение .drop"
+            1
+        else
+            // Запускаем файл с исходным кодом
+            runFile argv.[0]

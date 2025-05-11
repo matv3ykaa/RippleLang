@@ -1,4 +1,4 @@
-module RippleLang.Lexer
+module DropletLang.Lexer
 
 open System
 open System.Text.RegularExpressions
@@ -8,14 +8,15 @@ type Token =
     | INT of int
     | FLOAT of float
     | STRING of string
-    | LAMBDA
+    | FLOW       // Вместо LAMBDA
     | ARROW
     | LET
     | REC
     | IN
-    | IF
+    | WHEN       // Вместо IF
     | THEN
     | ELSE
+    | DRIP       // Новый токен для циклов
     | TRUE
     | FALSE
     | LPAREN
@@ -39,17 +40,21 @@ type Token =
     | AND
     | OR
     | CONS
+    | ABSORB    // Для импорта
     | EOF
 
 let tokenize (input: string) : Token list =
     let patterns = [
-        @"(\s|//.*)+", fun _ -> None  // Обрабатывает пробелы и комментарии
-        @"\bif\b", fun _ -> Some IF
+        @"(\s|#.*)+", fun _ -> None  // Обрабатывает пробелы и комментарии (# вместо //)
+        @"\bwhen\b", fun _ -> Some WHEN
         @"\bthen\b", fun _ -> Some THEN
         @"\belse\b", fun _ -> Some ELSE
         @"\blet\b", fun _ -> Some LET
         @"\brec\b", fun _ -> Some REC
         @"\bin\b", fun _ -> Some IN
+        @"\bflow\b", fun _ -> Some FLOW
+        @"\bdrip\b", fun _ -> Some DRIP
+        @"\babsorb\b", fun _ -> Some ABSORB
         @"\btrue\b", fun _ -> Some TRUE
         @"\bfalse\b", fun _ -> Some FALSE
         @"\(", fun _ -> Some LPAREN
@@ -58,7 +63,6 @@ let tokenize (input: string) : Token list =
         @"\]", fun _ -> Some RBRACKET
         @",", fun _ -> Some COMMA
         @";", fun _ -> Some SEMICOLON
-        @"\\", fun _ -> Some LAMBDA
         @"->", fun _ -> Some ARROW
         @"==", fun _ -> Some EQUAL
         @"!=", fun _ -> Some NOTEQUAL

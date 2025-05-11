@@ -1,6 +1,6 @@
-module RippleLang.Environment
+module DropletLang.Environment
 
-open RippleLang.Value
+open DropletLang.Value
 
 // Создание пустого окружения
 let emptyEnv : Environment = Map.empty
