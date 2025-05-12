@@ -1,2 +1,27 @@
-let greet = \ -> "Hello, World" in
-greet()
+// Рекурсивная функция для вычисления факториала
+let rec factorial = \n ->
+    if n <= 1 then 1
+    else n * factorial (n - 1)
+in
+print (factorial 5);
+
+// Альтернативная версия с == 0
+let rec factorial2 = \n ->
+    if n == 0 then 1
+    else n * factorial2 (n - 1)
+in
+print (factorial2 5);
+
+// Демонстрация вложенных условий
+let compareDemo = \a -> \b ->
+    if a > b then 
+        print "A больше B"
+    else 
+        if a < b then 
+            print "A меньше B" 
+        else 
+            print "A равно B"
+in
+compareDemo 5 3;
+compareDemo 2 2;
+compareDemo 3 5

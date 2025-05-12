@@ -32,11 +32,18 @@ type Parser(tokens: Token list) =
 
     member this.ParseProgram() =
         let rec parseExprs acc =
-            if this.IsAtEnd() then List.rev acc
+            if this.IsAtEnd() then 
+                List.rev acc
             else
                 let expr = this.ParseExpression()
-                if this.Match([SEMICOLON]) then parseExprs (expr :: acc)
-                else parseExprs (expr :: acc)
+                // Проверяем наличие точки с запятой, но не требуем ее обязательно
+                let newAcc = expr :: acc
+                if this.Match([SEMICOLON]) then 
+                    parseExprs newAcc
+                else if this.IsAtEnd() then
+                    List.rev newAcc
+                else
+                    failwithf "Unexpected token: %A" (this.Peek())
         parseExprs []
 
     member private this.ParseExpression() =
@@ -59,7 +66,7 @@ type Parser(tokens: Token list) =
 
     member private this.ParseIf() =
         if this.Match([IF]) then
-            let cond = this.ParseEquality()
+            let cond = this.ParseExpression()  // Измененная строка - используем ParseExpression
             this.Consume(THEN, "Expected 'then'") |> ignore
             let thenBr = this.ParseExpression()
             this.Consume(ELSE, "Expected 'else'") |> ignore
@@ -93,13 +100,14 @@ type Parser(tokens: Token list) =
     // Added method for comparison operators
     member private this.ParseComparison() =
         let mutable expr = this.ParseEquality()
-        while this.Match([GREATER; GREATEREQUAL; LESS; LESSEQUAL]) do
+        while this.Match([GREATER; GREATEREQUAL; LESS; LESSEQUAL; EQUAL]) do
             let op =
                 match this.Previous() with
                 | GREATER -> Gt
                 | GREATEREQUAL -> Gte
                 | LESS -> Lt
                 | LESSEQUAL -> Lte
+                | EQUAL -> Eq
                 | _ -> failwith "Unexpected operator"
             expr <- Op(expr, op, this.ParseEquality())
         expr

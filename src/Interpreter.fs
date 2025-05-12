@@ -205,11 +205,15 @@ let rec evaluate (expr: Expr) (env: Environment) : Value =
     | Tuple exprs ->
         VTuple (exprs |> List.map (fun e -> evaluate e env))
 
-// Выполнение программы (списка выражений)
+// Выполнение программы (списка выражений) с накоплением окружения
 let executeProgram (program: Program) (env: Environment) : Value =
     match program with
     | [] -> VUnit  // Пустая программа возвращает Unit
     | expressions ->
-        // Выполняем все выражения последовательно и возвращаем результат последнего
-        expressions
-        |> List.fold (fun _ expr -> evaluate expr env) VUnit
+        // Выполняем все выражения последовательно, 
+        // обновляя окружение при каждой итерации
+        List.fold (fun (currentEnv, _) expr -> 
+            let result = evaluate expr currentEnv
+            (currentEnv, result)
+        ) (env, VUnit) expressions
+        |> snd  // Возвращаем последний результат
